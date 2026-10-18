@@ -122,18 +122,15 @@ int main() try {
         out << "{\"policy\":" << quote_json(policy) << ",\"io_mode\":" << quote_json(io_mode)
             << ",\"capacity\":" << capacity << ",\"ready_jobs\":[";
         bool comma = false;
+        const auto separate = [&] { out << (std::exchange(comma, true) ? "," : ""); };
         for (Id id : ready) {
-            if (comma)
-                out << ',';
-            comma = true;
+            separate();
             out << id;
         }
         out << "],\"jobs\":[";
         comma = false;
         for (const auto &[id, j] : jobs) {
-            if (comma)
-                out << ',';
-            comma = true;
+            separate();
             Message m;
             fill_progress(m, j);
             out << "{\"job_id\":" << id << ",\"request_id\":" << j.base.request
@@ -147,20 +144,17 @@ int main() try {
         out << "],\"workers\":[";
         comma = false;
         for (const auto &w : workers) {
-            if (comma)
-                out << ',';
-            comma = true;
+            separate();
             out << "{\"worker_id\":" << w->id << ",\"state\":" << quote_json(name(w->state))
                 << ",\"job_id\":" << (w->state == WorkerState::Busy ? w->assignment.job : 0)
                 << ",\"chunk_id\":" << (w->state == WorkerState::Busy ? w->assignment.chunk : 0) << '}';
         }
-        std::uint64_t messages = client.sent_messages(), bytes = client.sent_bytes();
+        std::uint64_t messages = client.sent_messages() + client.received_messages(),
+                      bytes = client.sent_bytes() + client.received_bytes();
         for (const auto &w : workers) {
             messages += w->channel.sent_messages() + w->channel.received_messages();
             bytes += w->channel.sent_bytes() + w->channel.received_bytes();
         }
-        messages += client.received_messages();
-        bytes += client.received_bytes();
         out << "],\"qpc_ticks\":" << ticks() << ",\"qpc_frequency\":" << frequency() << ",\"ipc_messages\":" << messages
             << ",\"ipc_bytes\":" << bytes << '}';
         return out.str();
@@ -256,7 +250,6 @@ int main() try {
                     last_request = m.request;
                     trace.log("client_message_received", m, name(m.kind));
                     if (m.kind == Kind::Submit) {
-                        trace.log("submit_received", m);
                         if (stopping) {
                             reject(m.request, "Broker is stopping");
                             continue;

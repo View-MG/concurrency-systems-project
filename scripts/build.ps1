@@ -1,31 +1,24 @@
 param([string]$Compiler = 'g++')
 $ErrorActionPreference = 'Stop'
-$projectRoot = Split-Path -Parent $PSScriptRoot
-Push-Location $projectRoot
+Push-Location (Split-Path -Parent $PSScriptRoot)
 try {
-    New-Item -ItemType Directory -Force build | Out-Null
-    $commonSources = @('Common/analyzer.cpp', 'Common/chunks.cpp', 'Common/message.cpp', 'Common/ipc.cpp')
-    $flags = @('-std=c++17', '-O2', '-g', '-Wall', '-Wextra', '-Wpedantic', '-Werror', '-D_WIN32_WINNT=0x0601', '-ICommon', '-pthread', '-static-libgcc', '-static-libstdc++')
     New-Item -ItemType Directory -Force build/obj | Out-Null
+    $flags = @('-std=c++17', '-O2', '-g', '-Wall', '-Wextra', '-Wpedantic', '-Werror', '-D_WIN32_WINNT=0x0601', '-ICommon', '-pthread', '-static-libgcc', '-static-libstdc++')
     $commonObjects = @()
-    foreach ($commonSource in $commonSources) {
-        $objectPath = 'build/obj/' + [IO.Path]::GetFileNameWithoutExtension($commonSource) + '.o'
-        Write-Host "Compiling $commonSource"
-        & $Compiler @flags -c $commonSource -o $objectPath
-        if ($LASTEXITCODE -ne 0) { throw "Compile failed: $commonSource" }
-        $commonObjects += $objectPath
+    foreach ($source in @('Common/analyzer.cpp', 'Common/chunks.cpp', 'Common/message.cpp', 'Common/ipc.cpp')) {
+        $object = 'build/obj/' + [IO.Path]::GetFileNameWithoutExtension($source) + '.o'
+        Write-Host "Compiling $source"
+        & $Compiler @flags -c $source -o $object
+        if ($LASTEXITCODE -ne 0) { throw "Compile failed: $source" }
+        $commonObjects += $object
     }
-    foreach ($target in @('client','broker','worker','reference','prepare','common_tests')) {
-        $source = switch ($target) {
-            'client' { 'Client/main.cpp' }
-            'broker' { 'Broker/main.cpp' }
-            'worker' { 'Worker/main.cpp' }
-            'reference' { 'Reference/main.cpp' }
-            'prepare' { 'Prepare/main.cpp' }
-            'common_tests' { 'tests/common_tests.cpp' }
-        }
+    $targets = [ordered]@{
+        client = 'Client/main.cpp'; broker = 'Broker/main.cpp'; worker = 'Worker/main.cpp'
+        reference = 'Reference/main.cpp'; prepare = 'Prepare/main.cpp'; common_tests = 'tests/common_tests.cpp'
+    }
+    foreach ($target in $targets.Keys) {
         Write-Host "Building $target"
-        & $Compiler @flags $source @commonObjects -o "build/$target.exe" -lshell32
+        & $Compiler @flags $targets[$target] @commonObjects -o "build/$target.exe" -lshell32
         if ($LASTEXITCODE -ne 0) { throw "Build failed: $target" }
     }
 } finally { Pop-Location }

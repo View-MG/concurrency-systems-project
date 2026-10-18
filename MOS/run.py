@@ -101,7 +101,6 @@ def run_experiment(capacity: int = 4, items: int = 24, consumers: int = 1,
     header += [f"#define F_{name} {value}" for name, value in labels.items()]
     header += [f"#define MOS_PROCESSES {consumers + 1}", f"#define MOS_CAPACITY {capacity}", f"#define MOS_MAX_CLOCKS {max_clocks}"]
     (output / "symbols.h").write_text("\n".join(header) + "\n", encoding="ascii")
-    (output / "symbols.json").write_text(json.dumps({"globals": globals_, "labels": labels}, indent=2), encoding="utf-8")
 
     # Keep the source copies unchanged. Build-only adapters rename the original
     # interactive main, replace its interrupt printf with a read-only hook, and

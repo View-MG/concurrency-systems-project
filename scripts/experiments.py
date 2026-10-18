@@ -75,7 +75,6 @@ def measures(c, jobs, before, after):
             "worker_compute_us_sum": description["compute_us"],
             "opportunities_by_worker": dict(Counter(str(e["worker_id"]) for e in assignments)),
             "accepted_ticks": accepted["qpc_ticks"], "terminal_ticks": terminal["qpc_ticks"],
-            "command_boundary_event": command["event"],
         }
         accepted_ticks.append(accepted["qpc_ticks"])
         terminal_ticks.append(terminal["qpc_ticks"])
@@ -95,9 +94,6 @@ def measures(c, jobs, before, after):
         "worker_assignment_busy_fraction": {str(i): busy[str(i)] / (end - start) for i in range(1, len(c.processes) - 1)},
         "ipc_messages_probe_inclusive": after["ipc_messages"] - before["ipc_messages"],
         "ipc_bytes_probe_inclusive": after["ipc_bytes"] - before["ipc_bytes"],
-        "ipc_messages_excluding_two_probe_messages": after["ipc_messages"] - before["ipc_messages"] - 2,
-        "ipc_snapshot_before": {k: before[k] for k in ("ipc_messages", "ipc_bytes")},
-        "ipc_snapshot_after": {k: after[k] for k in ("ipc_messages", "ipc_bytes")},
     }
     check(all(0 <= value <= 1.00001 for value in system["worker_assignment_busy_fraction"].values()), "Invalid busy fraction")
     if "B" in result:
@@ -166,7 +162,6 @@ def execute(run_id, descriptions, workers=3, policy="fifo", io_mode="async", del
         return dict(id=run_id, workers=workers, policy=policy, io_mode=io_mode, artificial_delay_ms=delays or {},
                     jobs=job_metrics, system=system, process_usage=telemetry,
                     trace_directory=str(c.directory.relative_to(ROOT)))
-
 
 
 def fairness(slowdowns):

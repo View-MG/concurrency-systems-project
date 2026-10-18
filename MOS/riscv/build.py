@@ -59,6 +59,5 @@ def main() -> None:
     print("PASS: RV32I ELF load/store/branch and native C boundary tests (RV32I execution not tested)")
 
 
-
 if __name__ == "__main__":
     main()

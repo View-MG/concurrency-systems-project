@@ -65,8 +65,6 @@ class MonitorModel:
     def apply_response(self, value):
         kind = value.get("type", value.get("event", "message"))
         monitor = value.get("monitor")
-        if not isinstance(monitor, dict) and isinstance(value.get("jobs"), list):
-            monitor = value
         if isinstance(monitor, dict):
             if isinstance(monitor.get("jobs"), list):
                 if kind == "STATUS":
@@ -147,8 +145,6 @@ class MonitorModel:
         return completed, total, min(100, completed * 100 / total) if total else 0
 
 
-
-
 class TraceTailer:
     """Read append-only JSONL files without losing a partial final line."""
 
@@ -223,20 +219,16 @@ class ClusterController:
 
     def _read(self, role, process):
         try:
-            path = self.directory / f"gui-{role}.console.txt"
-            with path.open("w", encoding="utf-8") as output:
-                for line in process.stdout:
-                    output.write(line)
-                    output.flush()
-                    text = line.rstrip()
-                    try:
-                        value = json.loads(text) if role == "client" else None
-                    except ValueError:
-                        value = None
-                    if isinstance(value, dict):
-                        self.emit({"kind": "response", "payload": value})
-                    elif text:
-                        self.log(role, text)
+            for line in process.stdout:
+                text = line.rstrip()
+                try:
+                    value = json.loads(text) if role == "client" else None
+                except ValueError:
+                    value = None
+                if isinstance(value, dict):
+                    self.emit({"kind": "response", "payload": value})
+                elif text:
+                    self.log(role, text)
         except (OSError, ValueError) as error:
             self.log(role, str(error))
         finally:
@@ -746,7 +738,6 @@ class MonitorWindow:
             self.event_tree.see(children[-1])
         self._show_result()
         self._draw_timeline()
-
 
     def _show_result(self):
         selected = self.jobs.selection()

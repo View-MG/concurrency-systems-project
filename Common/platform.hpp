@@ -7,6 +7,7 @@
 #endif
 #include <windows.h>
 #include <shellapi.h>
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -139,14 +140,9 @@ struct Options {
         return value;
     }
     void allow(std::initializer_list<std::string> keys) const {
-        for (const auto &[key, value] : values) {
-            bool found = false;
-            for (const auto &allowed : keys)
-                if (key == allowed)
-                    found = true;
-            if (!found)
-                throw std::runtime_error("Unknown option: " + key);
-        }
+        for (const auto &entry : values)
+            if (std::find(keys.begin(), keys.end(), entry.first) == keys.end())
+                throw std::runtime_error("Unknown option: " + entry.first);
     }
 };
 inline std::wstring pipe_name(const std::string &session, const char *role) {

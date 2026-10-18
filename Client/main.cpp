@@ -118,9 +118,11 @@ int main() try {
             std::cout << message_json(m) << std::endl;
             switch (m.kind) {
             case Kind::Accepted:
-                trace.log("job_accepted", m);
-                break;
             case Kind::Progress:
+                break; // The SUBMIT stays pending until its terminal reply.
+            case Kind::ShutdownAck:
+                quitting = true;
+                pending.erase(m.request);
                 break;
             case Kind::Completed:
             case Kind::Failed:
@@ -128,10 +130,7 @@ int main() try {
             case Kind::CancelAck:
             case Kind::Rejected:
             case Kind::Status:
-            case Kind::ShutdownAck:
                 pending.erase(m.request);
-                if (m.kind == Kind::ShutdownAck)
-                    quitting = true;
                 break;
             default:
                 throw std::runtime_error("Message not allowed from Broker");
