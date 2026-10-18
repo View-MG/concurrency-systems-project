@@ -1,0 +1,214 @@
+
+// mos in Rz
+//  with semaphore
+
+Q, qq           // Q process queue, qq points to currentp in Q
+nump		// number of active process
+currentp	// current process
+
+newp()
+  return malloc(16)
+
+newStack()
+  return malloc(64)
+
+newFrame()
+  return malloc(64)
+
+// function prototype
+new(v)
+appendL(L,a)
+
+enqueue(p)	      // put p in process queue
+  nump = nump + 1
+  e = new(p)
+  appendL(Q,e)       // add it to the end of queue
+  e[1] = Q[0]        // make list circular   
+
+dequeue()	     // dequeue the current process
+  nump = nump - 1
+  p = currentp
+  p[5] = 0           // mark it not-active
+
+createp(ads)
+  p = newp()             // new PCB
+  p[0] = ads             // p.PC
+  p[1] = newStack()+16   // p.SP, offset for initial popm
+  p[2] = newFrame()      // p.FP
+  p[3] = 0               // p.rads
+  p[4] = 0               // p.retv
+  p[5] = 1		 // ready
+  enqueue(p)
+  return p
+
+nextQ()
+  qq = qq[1]      // next
+  return qq[0]    // get p
+
+nextp()           // next process from process queue
+  p = nextQ()
+  while( p[5] == 0 )   // not ready
+    p = nextQ()
+  return p	     
+
+terminate()          // terminate the current process
+  di(0)
+  dequeue()
+  ei(0)
+  asm("int #0")	     // task switch
+
+// task switch,  must not use local regs and frame
+//    use r20, r21
+#noframe
+int0()
+  asm("ld r21 currentp")	// save current process
+  asm("xch r20")		// get RetAds
+  asm("st r20 @0 r21")		// p.PC = RetAds
+  asm("pushm sp")		// save currentp context
+  asm("st sp @1 r21")		// p.SP = sp
+  asm("st fp @2 r21")		// p.FP = fp
+  asm("st rads @3 r21")		// save link register
+  asm("st retval @4 r21")	// save retv register
+
+  if(nump == 0)
+    asm("trap r0 #0")		// no process, stop simulation
+  currentp = nextp()		// update currentp
+
+  asm("ld r21 currentp")	// restore next process
+  asm("ld sp @1 r21")   	// get p.SP
+  asm("popm sp")		// restore context
+  asm("ld fp @2 r21")		// restore p.FP
+  asm("ld rads @3 r21")		// restore link register
+  asm("ld retval @4 r21")	// restore retv register
+  asm("ld r20 @0 r21")		// get p.PC
+  asm("xch r20")		// RetAds = p.PC
+
+boot()
+  currentp = newp()		// zeroth process not in Q
+  ei(0)		
+  asm("int #0")			// run task in Q
+
+
+// ---- manage list -----
+
+freelist 
+
+new(v)      // get a cell
+  if( freelist == 0 )
+    a = malloc(2)
+  else
+    a = freelist
+    freelist = a[1]   // next
+  a[0] = v 
+  a[1] = 0
+  return a
+
+free(a)   // free a cell
+  a[1] = freelist
+  freelist = a
+
+//  single link list with header
+//    header[0] points to head of list
+//    header[1] points to end of list
+
+appendL(L,a)    	// append list L with cell a
+  if( L[0] == 0 )	// empty list
+    L[0] = a
+  else
+    b = L[1]		// L.end
+    b[1] = a		// link end to a
+  L[1] = a		// update L.end
+
+deleteL(L)		// delete head from L
+  a = L[0]		// L.head
+  b = L[1]		// L.end
+  if( a == b )		// singleton
+    L[0] = 0		// empty
+    L[1] = 0
+  else
+    L[0] = a[1]		// update L.head to next
+  p = a[0]
+  free(a)
+  return p
+
+// ----- semaphore --------
+
+blockp()
+  dequeue()           // dequeue currentp
+  ei(0)
+  asm("int #0")	      // task switch
+
+wakeup(p)
+  nump = nump + 1
+  p[5] = 1            // mark as ready
+
+newsem(x)
+  s = malloc(2)
+  s[0] = x         	// initial value
+  s[1] = new(0)     	// make a list, wait list is empty
+  return s
+
+wait(s)
+  di(0)
+  s[0] = s[0] - 1
+  if( s[0] < 0 )
+    a = new(currentp)
+    appendL(s[1],a)	// put it to wait list
+    blockp()
+  ei(0)
+
+signal(s)
+  di(0)
+  s[0] = s[0] + 1
+  if( s[0] <= 0 )
+    p = deleteL(s[1])	// get p from wait list
+    wakeup(p)
+  ei(0)
+
+// function prototype
+reader()
+writer()
+
+full, empty, mutex   // semaphores
+shareVar
+
+main()
+  di(0)
+  nump = 0
+  freelist = 0
+  Q = malloc(2)        // make a list
+  p = createp(&reader)
+  p = createp(&writer) // order is important when start
+  qq = Q[0]            // point to Q head
+  full = newsem(0)     // writer starts first, sig before wait
+  empty = newsem(1)
+  mutex = newsem(1)
+  shareVar = 0
+  settimer0(400)
+  boot()
+
+// ------------- applications ----------
+
+writer()
+  i = 0
+  while( i < 5 )
+    wait(empty)
+    wait(mutex)
+    shareVar = shareVar + 1
+    signal(mutex)
+    i = i + 1
+    signal(full)
+  terminate()
+
+reader()
+  i = 0
+  while( i < 5 )
+    wait(full)
+    wait(mutex)
+    print("+",shareVar)
+    signal(mutex)
+    i = i + 1
+    signal(empty)
+  terminate()
+
+// ------------------------------------------

@@ -1,0 +1,14 @@
+// Interrupt-safe replacement for the course nextp() helper.
+// The interrupted FP can point into an unfinished function prologue/epilogue.
+// Never use that frame or process registers r0..r15 in the scheduler.
+// r20/r21 are the scratch registers reserved by the course int0() contract.
+#noframe
+nextp()
+  asm("ld r20 qq")
+  asm(":mos_next_candidate")
+  asm("ld r20 @1 r20")
+  asm("ld r21 @0 r20")
+  asm("ld r21 @5 r21")
+  asm("jf r21 mos_next_candidate")
+  asm("st r20 qq")
+  asm("ld retval @0 r20")

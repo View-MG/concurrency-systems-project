@@ -1,0 +1,1 @@
+{"valid_records":7,"malformed_records":3,"groups":{"/login":{"errors":2,"4xx":2,"5xx":0},"/payment":{"errors":3,"4xx":1,"5xx":2}}}

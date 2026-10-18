@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Windows GCC",
+            "compilerPath": "C:/TDM-GCC-64/bin/g++.exe",
+            "compilerArgs": ["-pthread"],
+            "intelliSenseMode": "windows-gcc-x64",
+            "includePath": ["${workspaceFolder}/Common"],
+            "defines": ["_WIN32_WINNT=0x0601"],
+            "cStandard": "c99",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

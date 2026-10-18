@@ -1,0 +1,72 @@
+// Application appended by run.py; int0 is original, nextp has the documented fix.
+// Configuration placeholders are replaced before compiling with Rz36.
+reader()
+writer()
+
+full, empty, mutex
+buffer, capacity, head, tail, occupancy
+produced, consumed, lastWritten, lastTaken
+items, consumers, quota
+
+main()
+  di(0)
+  nump = 0
+  freelist = 0
+  Q = malloc(2)
+  capacity = @CAPACITY@
+  items = @ITEMS@
+  consumers = @CONSUMERS@
+  quota = items / consumers
+  buffer = malloc(capacity)
+  head = 0
+  tail = 0
+  occupancy = 0
+  produced = 0
+  consumed = 0
+  i = 0
+  while( i < consumers )
+    p = createp(&reader)
+    i = i + 1
+  p = createp(&writer)
+  qq = Q[1]            // nextp starts at the first reader; it waits on full
+  full = newsem(0)
+  empty = newsem(capacity)
+  mutex = newsem(1)
+  settimer0(@TIMER@)
+  boot()
+
+writer()
+  i = 1
+  while( i <= items )
+    wait(empty)
+    wait(mutex)
+    buffer[tail] = i
+    lastWritten = i
+    if( tail + 1 == capacity )
+      tail = 0
+    else
+      tail = tail + 1
+    occupancy = occupancy + 1
+    produced = produced + 1
+    signal(mutex)
+    signal(full)
+    i = i + 1
+  terminate()
+
+reader()
+  i = 0
+  while( i < quota )
+    wait(full)
+    wait(mutex)
+    item = buffer[head]
+    lastTaken = item
+    if( head + 1 == capacity )
+      head = 0
+    else
+      head = head + 1
+    occupancy = occupancy - 1
+    consumed = consumed + 1
+    signal(mutex)
+    signal(empty)
+    i = i + 1
+  terminate()
