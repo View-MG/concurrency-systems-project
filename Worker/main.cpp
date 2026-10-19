@@ -10,6 +10,7 @@ int main() try {
     const auto delay = options.number("--delay-ms", 0, 0, 10000);
     const auto role = worker_id == 1 ? std::string("worker") : "worker" + std::to_string(worker_id);
     Trace trace(trace_dir(options), role);
+    // [Flow 2] Worker ต่อ pipe ของตัวเองแล้วส่ง READY → Broker ตั้งสถานะ Worker เป็น Ready
     Channel channel(pipe_name(options.get("--session", "demo"), role.c_str()), false);
     Message ready;
     ready.kind = Kind::Ready;
@@ -19,6 +20,7 @@ int main() try {
     bool stopping = false;
     while (true) {
         for (const auto &m : channel.pump()) {
+            // [Flow 8] รับ TASK: ตรวจ identity/range → analyze_chunk (Common/analyzer.cpp) → ส่ง RESULT กลับ Broker
             if (m.kind == Kind::Task && !stopping) {
                 if (!m.request || !m.job || !m.chunk || m.chunk > max_chunks || m.worker != worker_id ||
                     m.begin > m.end || m.end > m.file_size || m.file_size > max_file_bytes)

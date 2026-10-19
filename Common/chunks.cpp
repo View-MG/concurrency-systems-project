@@ -62,6 +62,7 @@ std::filesystem::path index_path(const std::filesystem::path &path) {
     result += L".lgaidx";
     return result;
 }
+// [Flow 3] สแกนไฟล์หาขอบ record ตัดเป็น chunk ขนาดราว target_bytes แล้วเขียน sidecar .lgaidx
 ChunkIndex prepare_index(const std::filesystem::path &path, std::uint64_t target_bytes) {
     if (!target_bytes || target_bytes > max_file_bytes)
         throw std::runtime_error("chunk-bytes must be 1..8589934592");

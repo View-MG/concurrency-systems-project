@@ -249,6 +249,7 @@ int main() try {
                         throw std::runtime_error("request_id must increase strictly");
                     last_request = m.request;
                     trace.log("client_message_received", m, name(m.kind));
+                    // [Flow 6] รับ SUBMIT: ตรวจเพดาน ล็อกไฟล์ load_index สร้าง Job เข้า ready queue แล้วตอบ ACCEPTED
                     if (m.kind == Kind::Submit) {
                         if (stopping) {
                             reject(m.request, "Broker is stopping");
@@ -383,6 +384,7 @@ int main() try {
                         w.state = WorkerState::Ready;
                         trace.log("worker_ready", m);
                     } else if (m.kind == Kind::Result) {
+                        // [Flow 9] ตรวจ RESULT ตรง assignment → merge_summary → ส่ง PROGRESS; ครบทุก chunk ส่ง COMPLETED
                         trace.log("result_received", m);
                         if (w.state != WorkerState::Busy || m.worker != w.id || m.request != w.assignment.request ||
                             m.job != w.assignment.job || m.chunk != w.assignment.chunk)
@@ -443,6 +445,7 @@ int main() try {
             }
         }
         settle_disconnect();
+        // [Flow 7] เลือก Job หน้าคิวตาม FIFO/RR แล้วส่ง TASK (chunk ถัดไป) ให้ Worker ที่ Ready → Flow 8 Worker
         // 3. Dispatch only to free Workers. Policy changes Job selection, never
         //    preempts computation or changes the order in which results arrive.
         for (auto &owned : workers) {
@@ -480,6 +483,7 @@ int main() try {
                 lose_worker(w, e.what());
             }
         }
+        // [Flow 11] เมื่อทุก Job settle แล้ว ส่ง SHUTDOWN ให้ Workers รอ ACK แล้วตอบ SHUTDOWN_ACK ให้ Client
         // 4. Shut down only after terminal Jobs have no outstanding assignments.
         bool settled = std::all_of(jobs.begin(), jobs.end(), [](const auto &entry) { return entry.second.settled(); });
         if (stopping && settled) {

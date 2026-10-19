@@ -217,6 +217,7 @@ class ClusterController:
         threading.Thread(target=self._read, args=(role, process), daemon=True).start()
         return process
 
+    # [Flow 10] อ่าน JSON จาก stdout ของ Client ส่งเข้า event queue → MonitorModel.apply_response อัปเดตหน้าจอ
     def _read(self, role, process):
         try:
             for line in process.stdout:
@@ -239,6 +240,7 @@ class ClusterController:
                     self.processes.pop(role, None)
             self.emit({"kind": "process_exit", "role": role, "code": code})
 
+    # [Flow 1] เปิด Broker → Workers → Client ด้วย session เดียวกัน → Flow 2 Channel::Channel (Common/ipc.cpp)
     def start(self, workers=3, policy="fifo", capacity=32):
         try:
             for executable in ("broker", "worker", "client", "prepare"):
@@ -286,6 +288,7 @@ class ClusterController:
             client.stdin.write(command + "\n")
             client.stdin.flush()
 
+    # [Flow 3] กด Submit: รัน prepare.exe (prepare_index) รอเสร็จ แล้วเขียน submit ลง stdin ของ Client → Flow 4
     def prepare_submit(self, filename, analysis, chunk_bytes):
         success = False
         try:
@@ -331,6 +334,7 @@ class ClusterController:
                 if process.stdin:
                     process.stdin.close()
 
+    # [Flow 11] ปิด session: ส่ง cancel/quit ให้ Client → Broker รอทุก Job settle แล้วส่ง SHUTDOWN ให้ Workers
     def stop(self, job_ids=()):
         self.stop_requested.set()
         try:

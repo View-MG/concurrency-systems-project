@@ -1,5 +1,6 @@
 #include "ipc.hpp"
 namespace lga {
+// [Flow 2] server (Broker) สร้าง Named Pipe แล้วรอต่อแบบ overlapped; ฝั่ง Client/Worker เปิดต่อด้วย CreateFileW
 Channel::Channel(const std::wstring &name, bool server) {
     if (server) {
         pipe_.reset(CreateNamedPipeW(
@@ -90,6 +91,7 @@ bool Channel::finish(Operation &op) {
     ResetEvent(op.event_handle.get());
     return true;
 }
+// [Flow 5] ฝั่งรับ: เก็บ completion ของ read/write แล้ว Decoder::feed (Common/message.cpp) ถอด frame เป็น Message
 std::vector<Message> Channel::pump() {
     if (closed_)
         return {};
@@ -134,6 +136,7 @@ std::vector<Message> Channel::pump() {
     begin_write();
     return messages;
 }
+// [Flow 5] ฝั่งส่ง: encode Message เป็น frame (Common/message.cpp) เข้าคิว แล้วเริ่ม WriteFile แบบ overlapped
 void Channel::send(const Message &m) {
     if (!connected())
         throw std::runtime_error("Cannot send to disconnected pipe");

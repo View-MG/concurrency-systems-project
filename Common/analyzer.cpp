@@ -23,6 +23,7 @@ bool timestamp(const std::string &s) {
     return d >= 1 && d <= days[static_cast<std::size_t>(m - 1)] + (m == 2 && leap ? 1 : 0) &&
            std::stoi(s.substr(11, 2)) < 24 && std::stoi(s.substr(14, 2)) < 60 && std::stoi(s.substr(17, 2)) < 60;
 }
+// [Flow 8] อ่าน record ในช่วง [begin,end) ตรวจรูปแบบ แล้วนับ valid/malformed และ 4xx/5xx ต่อ route หรือนาที
 Summary analyze_locked(const LockedInput &file, Analysis analysis, std::uint64_t begin, std::uint64_t end) {
     if (analysis != Analysis::Route && analysis != Analysis::Time)
         throw std::runtime_error("Invalid analysis type");

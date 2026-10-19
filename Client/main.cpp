@@ -111,6 +111,7 @@ int main() try {
               << std::endl;
     trace.log("client_connected");
     while (true) {
+        // [Flow 10] รับคำตอบจาก Broker จับคู่กับ request_id ที่รออยู่ แล้วพิมพ์ JSON ออก stdout ให้ GUI
         for (const auto &m : channel.pump()) {
             if (!pending.count(m.request))
                 throw std::runtime_error("Uncorrelated Broker reply");
@@ -136,6 +137,7 @@ int main() try {
                 throw std::runtime_error("Message not allowed from Broker");
             }
         }
+        // [Flow 4] รับคำสั่งจาก stdin thread (Input) แปลงเป็น Message พร้อม request_id → channel.send (Flow 5)
         if (WaitForSingleObject(input.handle(), 0) == WAIT_OBJECT_0) {
             auto [lines, eof, error] = input.take();
             for (const auto &line : lines) {
