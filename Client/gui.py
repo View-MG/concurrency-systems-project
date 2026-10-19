@@ -182,7 +182,7 @@ class TraceTailer:
                 # A just-created file can be temporarily unavailable; retry later.
                 continue
 
-
+# เปิดและปิด Process รวมถึงส่งคำสั่งผ่าน C++ Client
 class ClusterController:
     """Own only the child processes launched for this GUI session."""
 

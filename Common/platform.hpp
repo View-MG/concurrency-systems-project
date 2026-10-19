@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 
+//แปลง error ของ Windows เป็น exception ที่อ่านรู้เรื่อง
 namespace lga {
 inline std::runtime_error win_error(const char *operation, DWORD code = GetLastError()) {
     return std::runtime_error(std::string(operation) + " (Win32 error " + std::to_string(code) + ")");
